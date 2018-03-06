@@ -10,7 +10,22 @@
         <link rel="stylesheet" href="map_style.css" />
         <script>
 
-            
+            var myLat = 0;
+            var myLng = 0;
+            var me = new google.maps.LatLng(myLat, myLng);
+            var myOptions = {
+                zoom: 13,
+                center: me,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+            var map;
+            var marker;
+            var infowindow = new google.maps.InfoWindow();
+
+            function init() {
+                map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+                getMyLocation();
+            }
             
         </script>
 
