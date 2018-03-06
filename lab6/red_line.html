@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html>
+
+    <h1>MBTA Red Line Schedule</h1>
+    <div id="schedule">
+        No data......
+    </div>
+
+    <script>
+    
+
+        // A global variable `request`
+        var request;
+
+        // Step 1: Make an instance of the XMLHttpRequest object to make an HTTP 
+        // GET request
+        request = new XMLHttpRequest();
+
+        window.location.href = 'https://pure-beyond-16308.herokuapp.com/redline.json';
+        // Step 2: Initialize HTTP request
+        request.open("GET", "https://pure-beyond-16308.herokuapp.com/redline.json", true);
+        // Step 3: Set up handler / callback function to deal with HTTP response
+        request.onreadystatechange = function() {
+        // Step 5: If the request is completed and HTTP status is OK, get the response data
+            if (request.readyState == 4 && request.status == 200) {
+                divElement = document.getElementById("schedule"); // the DIV with the ID `schedule` in the HTML
+                result = request.responseText;
+                messages = JSON.parse(result);     // Parse response text to JavaScript Objects
+                outputString = "";
+                for (count = 0; count < messages.length; count++) {
+                        outputString += "<p>" + messages[count].id + "</p>";
+                }
+                divElement.innerHTML = outputString;
+            }
+        }
+
+        // Step 4: Send ("fire off") the request
+        request.send(); 
+
+    </script>
+
+</html>
