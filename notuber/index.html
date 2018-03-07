@@ -51,23 +51,23 @@
                 
                 // Create a marker
                 marker = new google.maps.Marker({
+                    map: map,
                     position: me,
                     username: "User: zdlGTR8zoR",
                     //icon: "avatar.jpg"
                 });
-                marker.setMap(map);
                     
                 // Open info window on click of marker
                 google.maps.event.addListener(marker, 'click', function() {
                     infowindow.setContent(marker.username);
                     infowindow.open(map, marker);
-
-                get_vehicles();
                 });
             }
             
             function get_passengers() {
-                
+                //console.log("Lat: " + myLat);
+                //console.log("Lng: " + myLng);
+                //console.log("username: " + username);
                 var request;
                 // Step 1: Make an instance of the XMLHttpRequest object to make an HTTP POST request
                 request = new XMLHttpRequest();
@@ -82,6 +82,7 @@
                         result = request.responseText;
                         p = JSON.parse(result);
                         populate_passengers_on_map(p);
+                        populate_vehicles_on_map(p);
                     }
                 }
                 request.send("username=zdlGTR8zoR&lat=10&lng=10");
@@ -96,7 +97,21 @@
                         position: cars,
                         map: map,
                         username: "User: " + passengers[count].username,
-                        icon: "passenger.png"
+                        icon: "passenger.png",
+                    });
+                }
+            }
+
+            function populate_vehicles_on_map(p) {
+                vehicles = p.vehicles;
+                for (count = 0; count < vehicles.length; count++) {
+                    cars = new google.maps.LatLng(vehicles[count].lat, vehicles[count].lng);
+                    // Create a marker
+                    marker = new google.maps.Marker({
+                        position: cars,
+                        map: map,
+                        username: "User: " + vehicles[count].username,
+                        icon: "car.png"
                     });
                 }
             }
