@@ -27,6 +27,7 @@
             function init() {
                 map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
                 getMyLocation();
+                get_passengers();
             }
 
             function getMyLocation() {
@@ -65,7 +66,7 @@
                 });
             }
             
-            function get_vehicles() {
+            function get_passengers() {
                 
                 var request;
                 // Step 1: Make an instance of the XMLHttpRequest object to make an HTTP POST request
@@ -79,12 +80,25 @@
                 request.onreadystatechange = function() {
                     if (request.readyState == 4 && request.status == 200) {
                         result = request.responseText;
-                        vehicles = JSON.parse(result);
-                        
+                        p = JSON.parse(result);
+                        populate_passengers_on_map(p);
                     }
                 }
-
                 request.send("username=zdlGTR8zoR&lat=10&lng=10");
+            }
+
+            function populate_passengers_on_map(p) {
+                passengers = p.passengers;
+                for (count = 0; count < passengers.length; count++) {
+                    cars = new google.maps.LatLng(passengers[count].lat, passengers[count].lng);
+                    // Create a marker
+                    marker = new google.maps.Marker({
+                        position: cars,
+                        map: map,
+                        username: "User: " + passengers[count].username,
+                        icon: "passenger.png"
+                    });
+                }
             }
 
         </script>
