@@ -12,7 +12,10 @@
 
             var myLat = 0;
             var myLng = 0;
-            var username ="";
+            var otherLat = 0;
+            var otherLng = 0;
+            var other_username = 0;
+            var username ="zdlGTR8zoR";
             var me = new google.maps.LatLng(myLat, myLng);
             var cars = new google.maps.LatLng(myLat, myLng);
             var myOptions = {
@@ -27,7 +30,6 @@
             function init() {
                 map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
                 getMyLocation();
-                get_passengers();
             }
 
             function getMyLocation() {
@@ -53,21 +55,20 @@
                 marker = new google.maps.Marker({
                     map: map,
                     position: me,
-                    username: "User: zdlGTR8zoR",
+                    username: "zdlGTR8zoR",
                     //icon: "avatar.jpg"
                 });
                     
                 // Open info window on click of marker
-                google.maps.event.addListener(marker, 'click', function() {
+                marker.addListener('click', function() {
                     infowindow.setContent(marker.username);
                     infowindow.open(map, marker);
                 });
+
+                get_passengers();
             }
             
             function get_passengers() {
-                //console.log("Lat: " + myLat);
-                //console.log("Lng: " + myLng);
-                //console.log("username: " + username);
                 var request;
                 // Step 1: Make an instance of the XMLHttpRequest object to make an HTTP POST request
                 request = new XMLHttpRequest();
@@ -81,23 +82,40 @@
                     if (request.readyState == 4 && request.status == 200) {
                         result = request.responseText;
                         p = JSON.parse(result);
-                        populate_passengers_on_map(p);
-                        populate_vehicles_on_map(p);
+                        if (p.hasOwnProperty("passengers")) {
+                            populate_passengers_on_map(p);
+                        }
+                        else if (p.hasOwnProperty("vehicles")) {
+                            populate_vehicles_on_map(p);
+                        }
                     }
                 }
-                request.send("username=zdlGTR8zoR&lat=10&lng=10");
+                request.send("username="+username+"&lat="+myLat+"&lng="+myLng);
             }
 
             function populate_passengers_on_map(p) {
                 passengers = p.passengers;
+            
                 for (count = 0; count < passengers.length; count++) {
-                    cars = new google.maps.LatLng(passengers[count].lat, passengers[count].lng);
+                    other_username = passengers[count].username;
+                    otherLat = passengers[count].lat;
+                    otherLng = passengers[count].lng;
+                    cars = new google.maps.LatLng(otherLat, otherLng);
                     // Create a marker
                     marker = new google.maps.Marker({
                         position: cars,
                         map: map,
-                        username: "User: " + passengers[count].username,
+                        username: "User: " + other_username,
                         icon: "passenger.png",
+                    });
+
+                    var distance = haversineDistance(otherLng, otherLat);
+                    console.log("distance: "+distance);
+                    marker['infowindow'] = new google.maps.InfoWindow();
+                    marker['infowindow'].setContent(other_username);
+                    marker['infowindow'].setContent(distance);
+                    google.maps.event.addListener(marker, 'click', function() {
+                        this['infowindow'].open(map, this);
                     });
                 }
             }
@@ -114,6 +132,33 @@
                         icon: "car.png"
                     });
                 }
+            }
+
+            function haversineDistance(otherLng, otherLat) {
+                function toRad(x) {
+                    return x * Math.PI / 180;
+                }
+
+                var lon1 = otherLng[0];
+                var lat1 = otherLng[1];
+                var lon2 = otherLat[0];
+                var lat2 = otherLat[1];
+
+                var R = 6371; // km
+
+                var x1 = lat2 - lat1;
+                var dLat = toRad(x1);
+                var x2 = lon2 - lon1;
+                var dLon = toRad(x2)
+                var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                var d = R * c;
+
+                d /= 1.60934;
+
+                return d;
             }
 
         </script>
