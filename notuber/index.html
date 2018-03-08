@@ -58,17 +58,17 @@
                     username: "zdlGTR8zoR",
                     //icon: "avatar.jpg"
                 });
-                    
+
+                get_data();
+                
+                infowindow.setContent(marker.username);
                 // Open info window on click of marker
                 marker.addListener('click', function() {
-                    infowindow.setContent(marker.username);
                     infowindow.open(map, marker);
                 });
-
-                get_passengers();
             }
             
-            function get_passengers() {
+            function get_data() {
                 var request;
                 // Step 1: Make an instance of the XMLHttpRequest object to make an HTTP POST request
                 request = new XMLHttpRequest();
@@ -100,21 +100,18 @@
                     other_username = passengers[count].username;
                     otherLat = passengers[count].lat;
                     otherLng = passengers[count].lng;
-                    cars = new google.maps.LatLng(otherLat, otherLng);
+                    riders = new google.maps.LatLng(otherLat, otherLng);
                     // Create a marker
-                    marker = new google.maps.Marker({
-                        position: cars,
+                    new_marker = new google.maps.Marker({
+                        position: riders,
                         map: map,
-                        username: "User: " + other_username,
                         icon: "passenger.png",
                     });
 
-                    var distance = haversineDistance(otherLng, otherLat);
-                    console.log("distance: "+distance);
-                    marker['infowindow'] = new google.maps.InfoWindow();
-                    marker['infowindow'].setContent(other_username);
-                    marker['infowindow'].setContent(distance);
-                    google.maps.event.addListener(marker, 'click', function() {
+                    var distance = haversineDistance(otherLat, otherLng, myLat, myLng);
+                    new_marker['infowindow'] = new google.maps.InfoWindow();
+                    new_marker['infowindow'].setContent(other_username+" is "+distance+" miles away");
+                    google.maps.event.addListener(new_marker, 'click', function() {
                         this['infowindow'].open(map, this);
                     });
                 }
@@ -122,27 +119,33 @@
 
             function populate_vehicles_on_map(p) {
                 vehicles = p.vehicles;
+
                 for (count = 0; count < vehicles.length; count++) {
-                    cars = new google.maps.LatLng(vehicles[count].lat, vehicles[count].lng);
+                    other_username = vehicles[count].username;
+                    otherLat = vehicles[count].lat;
+                    otherLng = vehicles[count].lng;
+                    drivers = new google.maps.LatLng(vehicles[count].lat, vehicles[count].lng);
                     // Create a marker
-                    marker = new google.maps.Marker({
-                        position: cars,
+                    new_marker = new google.maps.Marker({
+                        position: drivers,
                         map: map,
-                        username: "User: " + vehicles[count].username,
                         icon: "car.png"
+                    });
+
+                    var distance = haversineDistance(otherLat, otherLng, myLat, myLng);
+                    new_marker['infowindow'] = new google.maps.InfoWindow();
+                    new_marker['infowindow'].setContent(other_username+" is "+distance+" miles away");
+                    google.maps.event.addListener(new_marker, 'click', function() {
+                        this['infowindow'].open(map, this);
                     });
                 }
             }
 
-            function haversineDistance(otherLng, otherLat) {
+            function haversineDistance(lat1, lon1, lat2, lon2) {
+
                 function toRad(x) {
                     return x * Math.PI / 180;
                 }
-
-                var lon1 = otherLng[0];
-                var lat1 = otherLng[1];
-                var lon2 = otherLat[0];
-                var lat2 = otherLat[1];
 
                 var R = 6371; // km
 
