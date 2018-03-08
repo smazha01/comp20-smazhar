@@ -26,6 +26,8 @@
             var map;
             var marker;
             var infowindow = new google.maps.InfoWindow();
+            var min_distance = 100;
+            helper_min = 0;
 
             function init() {
                 map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
@@ -46,6 +48,7 @@
             }
 
             function renderMap() {
+                var closest = 98;
                 me = new google.maps.LatLng(myLat, myLng);
 
                 // Update map and go there...
@@ -56,20 +59,16 @@
                     map: map,
                     position: me,
                     username: "zdlGTR8zoR",
-                    //icon: "avatar.jpg"
+                    icon: "avatar.jpg"
                 });
-
+            
                 get_data();
                 
-                infowindow.setContent(marker.username);
-                // Open info window on click of marker
-                marker.addListener('click', function() {
-                    infowindow.open(map, marker);
-                });
             }
             
             function get_data() {
                 var request;
+                var object;
                 // Step 1: Make an instance of the XMLHttpRequest object to make an HTTP POST request
                 request = new XMLHttpRequest();
 
@@ -83,11 +82,20 @@
                         result = request.responseText;
                         p = JSON.parse(result);
                         if (p.hasOwnProperty("passengers")) {
-                            populate_passengers_on_map(p);
+                            object = "passenger";
+                            helper_min = populate_passengers_on_map(p);
                         }
                         else if (p.hasOwnProperty("vehicles")) {
-                            populate_vehicles_on_map(p);
+                            object = "vehicle"
+                            helper_min = populate_vehicles_on_map(p);
                         }
+                        
+                        // Set window of my location to nearest object
+                        infowindow.setContent(marker.username+". Nearest "+object+" is "+min_distance+" miles away");
+                        // Open info window on click of marker
+                        marker.addListener('click', function() {
+                            infowindow.open(map, marker);
+                        });
                     }
                 }
                 request.send("username="+username+"&lat="+myLat+"&lng="+myLng);
@@ -102,19 +110,22 @@
                     otherLng = passengers[count].lng;
                     riders = new google.maps.LatLng(otherLat, otherLng);
                     // Create a marker
+                    distance = haversineDistance(otherLat, otherLng, myLat, myLng);
                     new_marker = new google.maps.Marker({
                         position: riders,
                         map: map,
-                        icon: "passenger.png",
+                        icon: "passengers.png",
                     });
-
-                    var distance = haversineDistance(otherLat, otherLng, myLat, myLng);
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                    }
                     new_marker['infowindow'] = new google.maps.InfoWindow();
                     new_marker['infowindow'].setContent(other_username+" is "+distance+" miles away");
                     google.maps.event.addListener(new_marker, 'click', function() {
                         this['infowindow'].open(map, this);
                     });
                 }
+                return min_distance;
             }
 
             function populate_vehicles_on_map(p) {
@@ -125,6 +136,7 @@
                     otherLat = vehicles[count].lat;
                     otherLng = vehicles[count].lng;
                     drivers = new google.maps.LatLng(vehicles[count].lat, vehicles[count].lng);
+                    distance = haversineDistance(otherLat, otherLng, myLat, myLng);
                     // Create a marker
                     new_marker = new google.maps.Marker({
                         position: drivers,
@@ -132,13 +144,17 @@
                         icon: "car.png"
                     });
 
-                    var distance = haversineDistance(otherLat, otherLng, myLat, myLng);
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                    }
+
                     new_marker['infowindow'] = new google.maps.InfoWindow();
                     new_marker['infowindow'].setContent(other_username+" is "+distance+" miles away");
                     google.maps.event.addListener(new_marker, 'click', function() {
                         this['infowindow'].open(map, this);
                     });
                 }
+                return min_distance;
             }
 
             function haversineDistance(lat1, lon1, lat2, lon2) {
