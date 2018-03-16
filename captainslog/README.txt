@@ -13,9 +13,8 @@ Last modified 3/15/18
                 correctly. 
 
                 The entry is taken and printed with the current time and date.
-                The entries also persists through refreshing the page. The 
-                only problem is that the most recent entries are shown on the 
-                bottom of the page after each refresh.
+                The entries also remain on webpage in the correct order after
+		refreshing the page.
 
 
         2. Identify anyone with whom you have collaborated or discussed the 
