@@ -10,27 +10,34 @@
     <script>
 
         $(document).ready(function() {
-            
-                var storage = localStorage.getItem("previousItems");
-                $("#log").append(storage);
 
-                $("input").on("change", function() {
+            $("#log").append(localStorage.getItem('prevItems'));
+            readInput();
+        })
 
-                    var message = ($(this).val());
-                    var timestamp = new Date();
-                    var entry = "<p>" + timestamp+" - "+message + "</p>";
+        function readInput() {
 
+            $("#msg").bind("enterKey", function(e) {
+
+                var date = new Date();
+                if ($("#msg").val() != "") {
+                    var entry = "<p>" + date + " - " + $("#msg").val() + "</p>"
                     $("#log").prepend(entry);
+                    if (localStorage.getItem('prevItems') == null) {
+                        localStorage.setItem('prevItems', "");
+                    }
+                    var storedEntries = entry + " " +localStorage.getItem('prevItems');
+                    localStorage.setItem('prevItems', storedEntries);
+                }
+                $("#msg").val("");
+            });
 
-                    if (storage == null)
-                        storage = entry;
-                    else
-                        storage = storage + entry;
-
-                    localStorage.setItem('previousItems', storage);
-                    $(this).val("");
-                });
-        });
+            $("#msg").keyup(function(e){
+                if(e.keyCode == 13) {
+                    $(this).trigger("enterKey");
+                }
+            });
+        }
 
     </script>
 </head>
