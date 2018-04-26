@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+    <title>Comp 20 Assignment 4: Analysis of Ziwe Chen's Site</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Security Analysis of Ziwe Chen's Assignment 2 and 3</h1>
+        <h4>By Saad Mazhar | April 24, 2018</h4>
+        <hr>
+        <h3>Introduction</h3>
+        <hr>
+        <p>
+            In this report, I describe certain security vulnerabilities found in Ziwe Chen's <a href="http://pacific-beyond-94899.herokuapp.com/">API</a> and <a href="index.js">code</a> for Assignment 3. The site for assignment 3 displays a list of checkins by people who have sent an HTTP POST request to the site with their username, latitude, and longitude. The purpose of this assignment is to attack the website from all angles, by using a number of tools to compromise the functionality of Ziwe's website. I will then suggest ways to improve the security of his website.
+        </p>
+        <p>
+            Vulnerabilities come in many different forms. We define a vulnerability as anything an outsider can do to affect the expected behavior of the web application. For example, outsiders (such as myself) should not be able to change the appearance of the page, crash the site for all users, or overload the database with bogus data.
+        </p>
+        <h3>Methodology</h3>
+        <hr>
+        <p>
+            I started by inspecting the website, using the JavaScript console to see what sorts of things I can change on the front end. I then started using <code>curl</code> on the command line to see if I could inject scripts into the database to be rendered and executed on the front end.
+        </p>
+        <p>
+            After attacking the site from an outsider's point of view, I then went on to search for logical flaws in the code, and ways I could manipulate the database while running the API locally. Though I tested the database manipulations locally, I have little doubt that the database injections would have had the same behavior on the Heroku app.
+        </p>
+        <h3>Abstract of findings</h3>
+        <hr>
+        <p>
+            The primary issue with the checkins web API is that the developer has put too much faith in the user. If the user follows all the rules and does not send unexpected input, then the API works like a charm. However, malicious users can easily use certain tools, like <code>curl</code>, Burp Suite, or even just the browser address bar to manipulate the expected behavior of the site.
+        </p>
+        <h3>Issues Found</h3>
+        <hr>
+        <ol>
+            <li>
+                <strong>Issue: Cross-Site Scripting (XSS)</strong>
+                <ul>
+                    <li>
+                        Affects the <code>/rides</code> checkin site.
+                    </li>
+                    <li>
+                        Severity: <strong>HIGH</strong>. An attacker can easily make the website unusable by injecting client-side JavaScript, which every user will see.
+                    </li>
+                    <li>
+                        Description: When sending <code>POST</code> data to the <code>/rides</code> API, the server does not escape special characters, which can easily result in unwanted <code>&lt;script&gt;</code> tags. The browser will execute these scripts, potentially resulting in an unusable webpage for clients. These attacks can range from playfully malicious to very malicious:
+                        <img src="XSS.png" alt="Cross Site" /> The above is a mild attack against the website. One can think of many other potential <code>curl</code> requests with scripts that could cripple the site, and even the user's browser.
+                    </li>
+                    <li>
+                        Solution: This issue can be resolved rather easily on the server side by simply <strong>checking the user input</strong>. Potentially dangerous characters can be parsed and replaced, with code such as the following, taken from <a href="http://stackoverflow.com/questions/6234773/can-i-escape-html-special-chars-in-javascript">Stack Overflow</a>:
+                        
+                        <pre><code>
+                            function escapeHtml(post_param) {
+                                return post_param
+                                    .replace(/&amp;/g, "&amp;amp;")
+                                    .replace(/&lt;/g, "&amp;lt;")
+                                    .replace(/&gt;/g, "&amp;gt;")
+                                    .replace(/&quot;/g, "&amp;quot;")
+                                    .replace(/&#039;/g, "&amp;#039;");
+                            }
+                        </code></pre>This is a very simple solution to a large problem in the web application. I have already rendered the site useless with cross-site scripting.
+                    </li>
+                    <li>
+                        Side note: When POSTing to the <code>/rides</code> API, the server does not allow non-numerical values for 'lat' and 'lng'. This is a good thing, except for the fact that the server returns an Internal Server Error rather than a 400 error. However, the input is still inserted into the database, and appears in the root API after POSTing. The type of error should be specified by the status. In this case, the error is the client's problem (invalid input), and thus should fall in the 400 range. This could be resolved by ensuring that the lat and lng are numbers before inserting into the database.
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <strong>Issue: Query Parameters allow for Arbitrary Mongo Queries</strong>
+                <ul>
+                    <li>
+                        Affects the <code>/vehicles.json</code> GET API.
+                    </li>
+                    <li>
+                        Severity: <strong>MEDIUM</strong>. The fact that the user can view database entries for all users is risky in general, seeing as there could be sensitive material in the database. Fortunately, in this case, there is no sensitive information in the database, and users have access to most information stored in the database anyway, through the root GET API. Either way, the API should be validating query string parameters before executing the database query.
+                    </li>
+                    <li>
+                        Description: The <code>/vehicles.json</code> API accepts a query string parameter, which is supposed to contain the username for a vehicle and returns info about that vehicle if it is in the database. Unfortunately, the API does not check for whether or not the query parameter is an object or not, allowing for Mongo-style queries to get through to the database. The URL <code>http://pacific-beyond-94899.herokuapp.com/vehicle.json?username[$ne]=""</code> returns all database documents in the user database, since every document has a username 'not equal' to an empty string. In this case, only one vehicle is in the collection as of now, so only one vehicle is being shown.
+                        <img src="query.png" alt="Query"/>
+                    </li>
+                    <li>
+                        Solution: This issue can be resolved rather easily by checking whether or not the query parameter is a JSON object. A simple check, such as the following, will ensure that no arbitrary Mongo queries will be executed:
+                        <pre><code>
+                        if (typeof request.query.username === "object") {
+                            response.send(400);
+                            return;
+                        }
+                        </code></pre>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <strong>Issue: Database Overload</strong>
+                <ul>
+                    <li>
+                        Affects the entire API
+                    </li>
+                    <li>
+                        Severity: <strong>MEDIUM</strong>. Database overload can be a problem for practically any web application, and this app is no exception. Assuming that the MongoDB database is not under a paid plan, only 500MB of storage is allowed. This hack will flood the database with results, causing it to either crash, or bill the owner of the server if too many requests are made to the server, of which both are undesireable results.
+                    </li>
+                    <li>
+                        Description: I ran a shell script to POST large amounts of data to the <code>/rides</code> API using this command. <img src="terminal.png" alt="Terminal"/> Eventually, this resulted in a database overload, giving the 'Application Error' message on Heroku. The application has no way to ensure that large queries or large numbers of queries don't break the application.
+                        <img src="error.png" alt="Error"/>
+                    </li>
+                    <li>
+                        Solution: The server could check the size of the request parameters, using code such as the following:
+                        <pre><code>
+                        if (username.length &gt;= 100 || lat.length &gt;= 100 || lng.length &gt;= 100) {
+                           response.send(400);     
+                        }
+                        </code></pre> On the other hand, ensuring that the number of requests from a particular malicious user is more difficult, requiring knowledge of the user's IP address or origin. One simple (not perfect) fix to this would be to use the Mongo 'upsert' option, which either updates or inserts a document into the database: <code>db.collection('passengers').update(criteria, {upsert: true})</code>. This way the server can reject numerous data insertions from the same user if entered one after the other.
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <strong>Issue: Authentication</strong>
+                <ul>
+                    <li>
+                        Affects the whole API.
+                    </li>
+                    <li>
+                        Severity: <strong>HIGH</strong>.
+                    </li>
+                    <li>
+                        Description: Since none of the login information can be validated, essentially all of the logs cannot be trusted as anyone could have claimed to be anyone else.
+                    </li>
+                    <li>
+                        Solution: This issue can be resolved rather easily. The list of approved logins should be moved to a separate file, and not stored in the same file as the server. In addition, implementing some form of authentication to check that the user is the login name that they claim to be, such as facebook or google API.
+                    </li>
+                </ul>
+            </li>
+        </ol>
+        <h3>Conclusion</h3>
+        <hr>
+        <p>
+            Overall, the client's site contains many vulnerabilities that can easily be fixed by simply checking and blocking malicious user input. By following the recommendations that I have suggested above, the client can easily avoid many of the most common issues that arise when deploying sites on the World Wide Web. I recommend taking the precautions listed above, and then investing in a more detailed investigation into the security vulnerabilities of the site. In conlcusion: "You never ever trust a user's input!"
+        </p>
+    </div>
+</body>
+
+</html>
